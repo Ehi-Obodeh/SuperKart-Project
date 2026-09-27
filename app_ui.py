@@ -11,7 +11,7 @@ tab1, tab2 = st.tabs(["Online Inference (Single)", "Batch Inference (CSV)"])
 
 with tab1:
     st.header("Single Prediction Input")
-    
+
     col1, col2 = st.columns(2)
     with col1:
         product_weight = st.number_input("Product Weight", value=12.66)
@@ -19,7 +19,7 @@ with tab1:
         product_allocated_area = st.number_input("Product Allocated Area", value=0.027)
         product_mrp = st.number_input("Product MRP", value=117.08)
         store_size = st.selectbox("Store Size", ["High", "Medium", "Low"])
-    
+
     with col2:
         store_location_city_type = st.selectbox("Store Location City Type", ["Tier 1", "Tier 2", "Tier 3"])
         store_type = st.selectbox("Store Type", ["Supermarket Type1", "Supermarket Type2", "Departmental Store", "Food Mart"])
@@ -40,7 +40,7 @@ with tab1:
             "Store_Age_Years": store_age_years,
             "Product_Type_Category": product_type_category,
         }
-        
+
         try:
             # Change URL to your deployed backend service URL or keep localhost for local Docker testing
             response = requests.post("http://localhost:7860/v1/predict", json=payload)
@@ -55,13 +55,13 @@ with tab1:
 with tab2:
     st.header("Batch Prediction via CSV Upload")
     uploaded_file = st.file_uploader("Upload your input CSV file", type=["csv"])
-    
+
     if uploaded_file is not None:
         st.write("Uploaded File Preview:")
         import pandas as pd
         preview_df = pd.read_csv(uploaded_file)
         st.dataframe(preview_df.head())
-        
+
         if st.button("Run Batch Predictions"):
             files = {"file": uploaded_file.getvalue()}
             try:
