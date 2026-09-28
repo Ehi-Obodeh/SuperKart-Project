@@ -1,3 +1,4 @@
+import io
 import joblib
 import pandas as pd
 from flask import Flask, jsonify, request
@@ -24,6 +25,11 @@ def predict_online():
 
     df = pd.DataFrame(data if isinstance(data, list) else [data])
 
+    # Clean non-feature target or identifier columns if included in payload
+    cols_to_drop = [c for c in ["Product_Id", "Store_Id", "Product_Store_Sales_Total"] if c in df.columns]
+    if cols_to_drop:
+        df = df.drop(columns=cols_to_drop)
+
     try:
         prediction = model.predict(df)[0]
         return jsonify({"predicted_sales": float(prediction)}), 200
@@ -33,21 +39,31 @@ def predict_online():
 
 @app.post("/v1/predictbatch")
 def predict_batch():
-    """Endpoint for batch predictions (CSV file upload)"""
-    if "file" not in request.files:
-        return jsonify({"error": "No file provided under key 'file'"}), 400
-
-    file = request.files["file"]
-    if file.filename == "":
-        return jsonify({"error": "No selected file"}), 400
-
+    """Endpoint for batch predictions (CSV file upload or direct string bytes)"""
     try:
-        df = pd.read_csv(file)
+        # Handle multipart file upload or direct raw bytes payload from request
+        if "file" in request.files:
+            file_obj = request.files["file"]
+            # Wrap in BytesIO to seamlessly decode encoded string or file buffer
+            raw_bytes = file_obj.read()
+            df = pd.read_csv(io.BytesIO(raw_bytes))
+        elif request.data:
+            df = pd.read_csv(io.BytesIO(request.data))
+        else:
+            return jsonify({"error": "No file or payload provided"}), 400
+
+        # Remove target/ID columns if present in the batch dataset
+        cols_to_drop = [c for c in ["Product_Id", "Store_Id", "Product_Store_Sales_Total"] if c in df.columns]
+        if cols_to_drop:
+            df = df.drop(columns=cols_to_drop)
+
+        # Generate predictions
         predictions = model.predict(df)
         result_dict = {
             f"record_{i}": float(pred) for i, pred in enumerate(predictions)
         }
         return jsonify({"batch_predictions": result_dict}), 200
+
     except Exception as e:
         return jsonify({"error": f"Batch processing failed: {str(e)}"}), 500
 
